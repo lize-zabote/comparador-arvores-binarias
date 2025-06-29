@@ -1,9 +1,10 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <time.h>
 
+// Contador de esforço algorítmico
 int contAVL = 0;
 
+// Estruturas da Árvore AVL
 typedef struct noAVL {
     struct noAVL* pai;
     struct noAVL* esquerda;
@@ -16,6 +17,11 @@ typedef struct arvoreAVL {
     struct noAVL* raiz;
 } ArvoreAVL;
 
+// --- PROTÓTIPOS DAS FUNÇÕES ---
+ArvoreAVL* criar();
+void adicionar(ArvoreAVL* arvoreAVL, int valor);
+void remover(ArvoreAVL* arvoreAVL, int valor);
+NoAVL* localizar(NoAVL* noAVL, int valor);
 void balanceamento(ArvoreAVL*, NoAVL*);
 int altura(NoAVL*);
 int fb(NoAVL*);
@@ -23,28 +29,34 @@ NoAVL* rsd(ArvoreAVL*, NoAVL*);
 NoAVL* rse(ArvoreAVL*, NoAVL*);
 NoAVL* rdd(ArvoreAVL*, NoAVL*);
 NoAVL* rde(ArvoreAVL*, NoAVL*);
+void visitar(int valor);
+void percorrer(NoAVL* noAVL, void (*callback)(int));
 
-int maxx(int a, int b) {
+int maximo(int a, int b) {
     return a > b ? a : b;
 }
 
 ArvoreAVL* criar() {
     ArvoreAVL *arvoreAVL = malloc(sizeof(ArvoreAVL));
     arvoreAVL->raiz = NULL;
-  
     return arvoreAVL;
 }
 
-int vazia(ArvoreAVL* arvoreAVL) {
-    return arvoreAVL->raiz == NULL;
+int altura(NoAVL* noAVL) {
+    return noAVL != NULL ? noAVL->altura : 0;
+}
+
+int fb(NoAVL* noAVL) {
+    if (noAVL == NULL) return 0;
+    return altura(noAVL->esquerda) - altura(noAVL->direita);
 }
 
 void adicionar(ArvoreAVL* arvoreAVL, int valor) {
     NoAVL* noAVL = arvoreAVL->raiz;
 
-    contAVL++;
-
+    // Desce na árvore para encontrar a posição de inserção
     while (noAVL != NULL) {
+        contAVL++; // Incrementa ao "descer"
         if (valor > noAVL->valor) {
             if (noAVL->direita != NULL) {
                 noAVL = noAVL->direita;
@@ -60,6 +72,7 @@ void adicionar(ArvoreAVL* arvoreAVL, int valor) {
         }
     }
 
+    // Cria o novo nó
     NoAVL* novo = malloc(sizeof(NoAVL));
     novo->valor = valor;
     novo->pai = noAVL;
@@ -67,7 +80,8 @@ void adicionar(ArvoreAVL* arvoreAVL, int valor) {
     novo->direita = NULL;
     novo->altura = 1;
 
-    if (noAVL == NULL) {    
+    // Insere o novo nó
+    if (noAVL == NULL) {
         arvoreAVL->raiz = novo;
     } else {
         if (valor > noAVL->valor) {
@@ -75,87 +89,36 @@ void adicionar(ArvoreAVL* arvoreAVL, int valor) {
         } else {
             noAVL->esquerda = novo;
         }
-        
+        // Inicia o processo de balanceamento subindo a partir do pai do novo nó
         balanceamento(arvoreAVL, noAVL);
     }
 }
 
-NoAVL* localizar(NoAVL* noAVL, int valor) {
-    while (noAVL != NULL) {
-        if (noAVL->valor == valor) {
-            return noAVL;
-        }
-        
-        noAVL = valor < noAVL->valor ? noAVL->esquerda : noAVL->direita;
-    }
-
-    return NULL;
-}
-
-void percorrer(NoAVL* noAVL, void (*callback)(int)) {
-    if (noAVL != NULL) {
-        percorrer(noAVL->esquerda,callback);
-        callback(noAVL->valor);
-        percorrer(noAVL->direita,callback);
-    }
-}
-
-void percorrerProfundidadeInOrder(ArvoreAVL* arvoreAVL, NoAVL* noAVL, void (*callback)(int)) {
-    if (noAVL != NULL) {
-        
-        
-        percorrerProfundidadeInOrder(arvoreAVL, noAVL->esquerda,callback);
-        callback(noAVL->valor);
-        percorrerProfundidadeInOrder(arvoreAVL, noAVL->direita,callback);
-    }
-}
-
-void visitar(int valor){
-    printf("%d ", valor);
-}
-
 void balanceamento(ArvoreAVL* arvoreAVL, NoAVL* noAVL) {
+    // Sobe na árvore atualizando alturas e rebalanceando
     while (noAVL != NULL) {
-        noAVL->altura = maxx(altura(noAVL->esquerda), altura(noAVL->direita)) + 1;
+        contAVL++; // Incrementa ao "subir"
+        noAVL->altura = maximo(altura(noAVL->esquerda), altura(noAVL->direita)) + 1;
         int fator = fb(noAVL);
 
-        if (fator > 1) { //árvore mais pesada para esquerda
-            //rotação para a direita
-            if (fb(noAVL->esquerda) > 0) {
-                rsd(arvoreAVL, noAVL); //rotação simples a direita, pois o FB do filho tem sinal igual
-            } else {
-                rdd(arvoreAVL, noAVL); //rotação dupla a direita, pois o FB do filho tem sinal diferente
+        if (fator > 1) { // Árvore mais pesada para esquerda
+            if (fb(noAVL->esquerda) >= 0) { // Sinais iguais: Rotação Simples
+                rsd(arvoreAVL, noAVL);
+            } else { // Sinais diferentes: Rotação Dupla
+                rdd(arvoreAVL, noAVL);
             }
-        } else if (fator < -1) { //árvore mais pesada para a direita
-            //rotação para a esquerda
-            if (fb(noAVL->direita) < 0) {
-                rse(arvoreAVL, noAVL); //rotação simples a esquerda, pois o FB do filho tem sinal igual
-            } else {
-                rde(arvoreAVL, noAVL); //rotação dupla a esquerda, pois o FB do filho tem sinal diferente
+        } else if (fator < -1) { // Árvore mais pesada para a direita
+            if (fb(noAVL->direita) <= 0) { // Sinais iguais: Rotação Simples
+                rse(arvoreAVL, noAVL);
+            } else { // Sinais diferentes: Rotação Dupla
+                rde(arvoreAVL, noAVL);
             }
         }
-
-        noAVL = noAVL->pai; 
+        noAVL = noAVL->pai;
     }
 }
 
-int altura(NoAVL* noAVL){
-    return noAVL != NULL ? noAVL->altura : 0;
-}
-
-int fb(NoAVL* noAVL) {
-    int esquerda = 0,direita = 0;
-  
-    if (noAVL->esquerda != NULL) {
-        esquerda = noAVL->esquerda->altura;
-    }
-
-    if (noAVL->direita != NULL) {
-        direita = noAVL->direita->altura;
-    }
-  
-    return esquerda - direita;
-}
+// --- FUNÇÕES DE ROTAÇÃO ---
 
 NoAVL* rse(ArvoreAVL* arvoreAVL, NoAVL* noAVL) {
     NoAVL* pai = noAVL->pai;
@@ -163,11 +126,9 @@ NoAVL* rse(ArvoreAVL* arvoreAVL, NoAVL* noAVL) {
 
     if (direita->esquerda != NULL) {
         direita->esquerda->pai = noAVL;
-    } 
-  
+    }
     noAVL->direita = direita->esquerda;
     noAVL->pai = direita;
-
     direita->esquerda = noAVL;
     direita->pai = pai;
 
@@ -181,9 +142,8 @@ NoAVL* rse(ArvoreAVL* arvoreAVL, NoAVL* noAVL) {
         }
     }
 
-    noAVL->altura = maxx(altura(noAVL->esquerda), altura(noAVL->direita)) + 1;
-    direita->altura = maxx(altura(direita->esquerda), altura(direita->direita)) + 1;
-
+    noAVL->altura = maximo(altura(noAVL->esquerda), altura(noAVL->direita)) + 1;
+    direita->altura = maximo(altura(direita->esquerda), altura(direita->direita)) + 1;
     return direita;
 }
 
@@ -193,11 +153,9 @@ NoAVL* rsd(ArvoreAVL* arvoreAVL, NoAVL* noAVL) {
 
     if (esquerda->direita != NULL) {
         esquerda->direita->pai = noAVL;
-    } 
-  
+    }
     noAVL->esquerda = esquerda->direita;
     noAVL->pai = esquerda;
-  
     esquerda->direita = noAVL;
     esquerda->pai = pai;
 
@@ -211,9 +169,8 @@ NoAVL* rsd(ArvoreAVL* arvoreAVL, NoAVL* noAVL) {
         }
     }
 
-    noAVL->altura = maxx(altura(noAVL->esquerda), altura(noAVL->direita)) + 1;
-    esquerda->altura = maxx(altura(esquerda->esquerda), altura(esquerda->direita)) + 1;
-
+    noAVL->altura = maximo(altura(noAVL->esquerda), altura(noAVL->direita)) + 1;
+    esquerda->altura = maximo(altura(esquerda->esquerda), altura(esquerda->direita)) + 1;
     return esquerda;
 }
 
@@ -227,51 +184,118 @@ NoAVL* rdd(ArvoreAVL* arvoreAVL, NoAVL* noAVL) {
     return rsd(arvoreAVL, noAVL);
 }
 
+// --- FUNÇÕES DE BUSCA E REMOÇÃO ---
+
+NoAVL* localizar(NoAVL* noAVL, int valor) {
+    while (noAVL != NULL) {
+        if (noAVL->valor == valor) {
+            return noAVL;
+        }
+        contAVL++; // Incrementa ao "descer" na busca
+        noAVL = valor < noAVL->valor ? noAVL->esquerda : noAVL->direita;
+    }
+    return NULL;
+}
+
+NoAVL* minimo(NoAVL* no) {
+    while (no != NULL && no->esquerda != NULL) {
+        contAVL++; // Incrementa ao "descer" para encontrar o mínimo
+        no = no->esquerda;
+    }
+    return no;
+}
+
+void removerNo(ArvoreAVL* arvore, NoAVL* noRemover) {
+    NoAVL* noPai = noRemover->pai;
+    
+    // Caso 1 e 2: O nó a ser removido tem 0 ou 1 filho
+    if (noRemover->esquerda == NULL || noRemover->direita == NULL) {
+        NoAVL* filho = noRemover->esquerda != NULL ? noRemover->esquerda : noRemover->direita;
+
+        if (noPai == NULL) {
+            arvore->raiz = filho;
+        } else if (noPai->esquerda == noRemover) {
+            noPai->esquerda = filho;
+        } else {
+            noPai->direita = filho;
+        }
+
+        if (filho != NULL) {
+            filho->pai = noPai;
+        }
+        free(noRemover);
+    // Caso 3: O nó a ser removido tem 2 filhos
+    } else {
+        // Encontra o sucessor em-ordem (o menor nó da subárvore direita)
+        NoAVL* sucessor = minimo(noRemover->direita);
+        noRemover->valor = sucessor->valor; // Copia o valor do sucessor
+        removerNo(arvore, sucessor); // Remove o nó sucessor (que terá 0 ou 1 filho)
+        return; // Retorna para evitar rebalanceamento duplicado
+    }
+
+    // Inicia o balanceamento a partir do pai do nó fisicamente removido
+    if (noPai != NULL) {
+        balanceamento(arvore, noPai);
+    }
+}
+
+void remover(ArvoreAVL* arvore, int valor) {
+    printf("Removendo %d...\n", valor);
+    NoAVL* noRemover = localizar(arvore->raiz, valor);
+    if (noRemover != NULL) {
+        removerNo(arvore, noRemover);
+    } else {
+        printf("Valor %d nao encontrado para remocao.\n", valor);
+    }
+}
+
+// --- FUNÇÕES DE EXIBIÇÃO ---
+
+void percorrer(NoAVL* noAVL, void (*callback)(int)) {
+    if (noAVL != NULL) {
+        percorrer(noAVL->esquerda, callback);
+        callback(noAVL->valor);
+        percorrer(noAVL->direita, callback);
+    }
+}
+
+void visitar(int valor) {
+    printf("%d ", valor);
+}
+
 int main() {
     ArvoreAVL* a = criar();
-    ArvoreAVL* b = criar();
-    ArvoreAVL* c = criar();
 
-    //Ordem 1 = qtdDeFolhas: 1+2 = 3
-    //Ordem 5 = qtdDeFolhas: 1+2+4+8+16+32 = 63
-    //Ordem 10 = qtdDeFolhas: 1+2+4+8+16+32+64+128+256+512+1024 = 2047
-    int qtdDeFolhas[3] = {3,63,2047};
-    ArvoreAVL* arvores[3] = {a,b,c};
+    printf("--- INSERINDO ELEMENTOS ---\n");
+    adicionar(a, 10);
+    adicionar(a, 20);
+    adicionar(a, 30);
+    adicionar(a, 40);
+    adicionar(a, 50);
+    adicionar(a, 25);
 
-    srand(time(NULL));
+    printf("\nIn-order inicial: ");
+    percorrer(a->raiz, visitar);
+    printf("\n");
+    printf("Contador AVL apos insercoes: %d\n\n", contAVL);
 
-    // for (int x = 0; x < 3; x++)
-    // {
-    //     for (int i = 0; i < qtdDeFolhas[x]; i++)
-    //     {
-    //         adicionar(arvores[x],(rand() % 10000) + 1);
-    //     }
-    //     printf("In-order: ");
-    //     percorrerProfundidadeInOrder(arvores[x], arvores[x]->raiz,visitar);
-    //     printf("\n");
-    // }
+    printf("--- REMOVENDO ELEMENTOS ---\n");
+    contAVL = 0; // Reseta para medir apenas a remoção
+    remover(a, 40); // Remove um nó que causa rebalanceamento
 
-    int media[3] = {0,0,0};
+    printf("\nIn-order apos remover 40: ");
+    percorrer(a->raiz, visitar);
+    printf("\n");
+    printf("Contador AVL na remocao do 40: %d\n\n", contAVL);
+    
+    contAVL = 0;
+    remover(a, 10);
 
-    for (int x = 0; x < 3; x++) //interação em cada ordem
-    {
-        for (int v = 0; v < 10; v++) //interação para definir as médias por ordem
-        {
-            contAVL = 0;
-            for (int i = 0; i < qtdDeFolhas[x]; i++)
-            {
-                adicionar(arvores[x],(rand() % 10000) + 1);
-            }
-            printf("In-order: ");
-            percorrerProfundidadeInOrder(arvores[x], arvores[x]->raiz,visitar);
-            printf("\nNúmero de operações: %d\n", contAVL);
-            media[x] += contAVL;
-            printf("\n");
-        }
-        
-        
-    }
-    printf("\nMédia de operações: %d\n", (media[0] / 10));
-    printf("\nMédia de operações: %d\n", (media[1] / 10));
-    printf("\nMédia de operações: %d\n", (media[2] / 10));
+    printf("\nIn-order apos remover 10: ");
+    percorrer(a->raiz, visitar);
+    printf("\n");
+    printf("Contador AVL na remocao do 10: %d\n", contAVL);
+    
+    // free(a); // Idealmente, deveria haver uma função para liberar toda a memória
+    return 0;
 }

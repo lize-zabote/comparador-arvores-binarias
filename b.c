@@ -35,7 +35,6 @@ ArvoreB* criaArvore(int ordem) {
     return a;
 }
 
-int contB = 0;
 
 NoB* criaNo(ArvoreB* arvore) {
     int max = arvore->ordem * 2;

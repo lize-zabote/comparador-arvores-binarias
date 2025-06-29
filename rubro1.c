@@ -1,9 +1,10 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <time.h>
 
+// Contador de esforço algorítmico
 int contRubro = 0;
 
+// Estruturas da Árvore Rubro-Negra
 enum coloracao { Vermelho, Preto };
 typedef enum coloracao Cor;
 
@@ -17,51 +18,74 @@ typedef struct noRubro {
 
 typedef struct arvore {
     struct noRubro* raiz;
-    struct noRubro* nulo; 
+    struct noRubro* nulo; // Nó sentinela
 } ArvoreRubro;
 
-NoRubro* criarNo(ArvoreRubro*, NoRubro*, int);
-void balancear(ArvoreRubro*, NoRubro*);
-void rotacionarEsquerda(ArvoreRubro*, NoRubro*);
-void rotacionarDireita(ArvoreRubro*, NoRubro*);
-
+// --- PROTÓTIPOS DAS FUNÇÕES ---
 ArvoreRubro* criar();
-int vazia(ArvoreRubro*);
-NoRubro* adicionar(ArvoreRubro*, int);
+NoRubro* criarNo(ArvoreRubro* arvore, NoRubro* pai, int valor);
+NoRubro* adicionar(ArvoreRubro* arvore, int valor);
+NoRubro* adicionarNo(ArvoreRubro* arvore, NoRubro* noRubro, int valor);
+void balancear(ArvoreRubro* arvore, NoRubro* noRubro);
+void remover(ArvoreRubro* arvore, int valor);
+void removerNo(ArvoreRubro* arvore, NoRubro* noRemover);
+void balancearRemocao(ArvoreRubro* arvore, NoRubro* no);
+void transplantar(ArvoreRubro* arvore, NoRubro* u, NoRubro* v);
+NoRubro* minimo(ArvoreRubro* arvore, NoRubro* no);
 NoRubro* localizar(ArvoreRubro* arvore, int valor);
+void rotacionarEsquerda(ArvoreRubro* arvore, NoRubro* noRubro);
+void rotacionarDireita(ArvoreRubro* arvore, NoRubro* noRubro);
+void percorrerProfundidadeInOrder(ArvoreRubro* arvore, NoRubro* noRubro, void (*callback)(int));
+void visitar(int valor);
 
 ArvoreRubro* criar() {
     ArvoreRubro *arvore = malloc(sizeof(ArvoreRubro));
-    arvore->nulo = NULL;
-    arvore->raiz = NULL;
-
-    arvore->nulo = criarNo(arvore, NULL, 0);
+    
+    // O nó nulo (sentinela) é crucial para simplificar o código
+    arvore->nulo = malloc(sizeof(NoRubro));
     arvore->nulo->cor = Preto;
-
+    arvore->nulo->valor = 0;
+    arvore->nulo->pai = NULL;
+    arvore->nulo->esquerda = NULL;
+    arvore->nulo->direita = NULL;
+    
+    arvore->raiz = arvore->nulo;
     return arvore;
 }
 
 int vazia(ArvoreRubro* arvore) {
-    return arvore->raiz == NULL;
+    return arvore->raiz == arvore->nulo;
 }
 
 NoRubro* criarNo(ArvoreRubro* arvore, NoRubro* pai, int valor) {
     NoRubro* noRubro = malloc(sizeof(NoRubro));
-
-    noRubro->pai = pai;    
+    noRubro->pai = pai;
     noRubro->valor = valor;
     noRubro->direita = arvore->nulo;
     noRubro->esquerda = arvore->nulo;
-
+    noRubro->cor = Vermelho; // Novos nós são sempre vermelhos inicialmente
     return noRubro;
 }
 
+// --- INSERÇÃO E BALANCEAMENTO PÓS-INSERÇÃO ---
+
+NoRubro* adicionar(ArvoreRubro* arvore, int valor) {
+    if (vazia(arvore)) {
+        arvore->raiz = criarNo(arvore, arvore->nulo, valor);
+        arvore->raiz->cor = Preto; // A raiz é sempre preta
+        return arvore->raiz;
+    } else {
+        NoRubro* novoNo = adicionarNo(arvore, arvore->raiz, valor);
+        balancear(arvore, novoNo);
+        return novoNo;
+    }
+}
+
 NoRubro* adicionarNo(ArvoreRubro* arvore, NoRubro* noRubro, int valor) {
+    contRubro++; // Conta a "descida" recursiva
     if (valor > noRubro->valor) {
         if (noRubro->direita == arvore->nulo) {
-            noRubro->direita = criarNo(arvore, noRubro, valor);     
-            noRubro->direita->cor = Vermelho;       
-        		
+            noRubro->direita = criarNo(arvore, noRubro, valor);
             return noRubro->direita;
         } else {
             return adicionarNo(arvore, noRubro->direita, valor);
@@ -69,8 +93,6 @@ NoRubro* adicionarNo(ArvoreRubro* arvore, NoRubro* noRubro, int valor) {
     } else {
         if (noRubro->esquerda == arvore->nulo) {
             noRubro->esquerda = criarNo(arvore, noRubro, valor);
-            noRubro->esquerda->cor = Vermelho;
-            
             return noRubro->esquerda;
         } else {
             return adicionarNo(arvore, noRubro->esquerda, valor);
@@ -78,121 +100,202 @@ NoRubro* adicionarNo(ArvoreRubro* arvore, NoRubro* noRubro, int valor) {
     }
 }
 
-NoRubro* adicionar(ArvoreRubro* arvore, int valor) {
-    if (vazia(arvore)) {
-        arvore->raiz = criarNo(arvore, arvore->nulo, valor);
-        arvore->raiz->cor = Preto;
-        	
-        return arvore->raiz;
-    } else {
-        NoRubro* noRubro = adicionarNo(arvore, arvore->raiz, valor);
-        balancear(arvore, noRubro);
-        
-        return noRubro;
+void balancear(ArvoreRubro* arvore, NoRubro* noRubro) {
+    while (noRubro != arvore->raiz && noRubro->pai->cor == Vermelho) {
+        contRubro++; // Conta a "subida" / verificação
+        NoRubro* pai = noRubro->pai;
+        NoRubro* avo = pai->pai;
+
+        if (pai == avo->esquerda) {
+            NoRubro *tio = avo->direita;
+            if (tio->cor == Vermelho) { // Caso 1: Tio é vermelho
+                tio->cor = Preto;
+                pai->cor = Preto;
+                avo->cor = Vermelho;
+                noRubro = avo; // Sobe o ponteiro para o avô
+                contRubro += 2; // Contabiliza a subida de 2 níveis
+            } else { // Tio é preto
+                if (noRubro == pai->direita) { // Caso 2: Zigue-zague
+                    noRubro = pai; // Sobe um nível
+                    contRubro++;
+                    rotacionarEsquerda(arvore, noRubro);
+                }
+                // Caso 3: Linha reta
+                noRubro->pai->cor = Preto;
+                noRubro->pai->pai->cor = Vermelho;
+                rotacionarDireita(arvore, noRubro->pai->pai);
+            }
+        } else { // Lado direito (simétrico)
+            NoRubro *tio = avo->esquerda;
+            if (tio->cor == Vermelho) { // Caso 1
+                tio->cor = Preto;
+                pai->cor = Preto;
+                avo->cor = Vermelho;
+                noRubro = avo;
+                contRubro += 2;
+            } else {
+                if (noRubro == pai->esquerda) { // Caso 2
+                    noRubro = pai;
+                    contRubro++;
+                    rotacionarDireita(arvore, noRubro);
+                }
+                // Caso 3
+                noRubro->pai->cor = Preto;
+                noRubro->pai->pai->cor = Vermelho;
+                rotacionarEsquerda(arvore, noRubro->pai->pai);
+            }
+        }
     }
+    arvore->raiz->cor = Preto;
+}
+
+
+// --- REMOÇÃO E BALANCEAMENTO PÓS-REMOÇÃO ---
+
+void remover(ArvoreRubro* arvore, int valor) {
+    printf("Removendo %d...\n", valor);
+    NoRubro* noRemover = localizar(arvore, valor);
+    if (noRemover != arvore->nulo) {
+        removerNo(arvore, noRemover);
+    } else {
+        printf("Valor %d nao encontrado para remocao.\n", valor);
+    }
+}
+
+void removerNo(ArvoreRubro* arvore, NoRubro* noRemover) {
+    NoRubro* y = noRemover;
+    NoRubro* x;
+    Cor corOriginalY = y->cor;
+
+    if (noRemover->esquerda == arvore->nulo) {
+        x = noRemover->direita;
+        transplantar(arvore, noRemover, noRemover->direita);
+    } else if (noRemover->direita == arvore->nulo) {
+        x = noRemover->esquerda;
+        transplantar(arvore, noRemover, noRemover->esquerda);
+    } else {
+        y = minimo(arvore, noRemover->direita);
+        corOriginalY = y->cor;
+        x = y->direita;
+        if (y->pai == noRemover) {
+            x->pai = y;
+        } else {
+            transplantar(arvore, y, y->direita);
+            y->direita = noRemover->direita;
+            y->direita->pai = y;
+        }
+        transplantar(arvore, noRemover, y);
+        y->esquerda = noRemover->esquerda;
+        y->esquerda->pai = y;
+        y->cor = noRemover->cor;
+    }
+    free(noRemover);
+
+    // Se o nó removido era preto, a árvore precisa ser rebalanceada
+    if (corOriginalY == Preto) {
+        balancearRemocao(arvore, x);
+    }
+}
+
+void balancearRemocao(ArvoreRubro* arvore, NoRubro* no) {
+    while (no != arvore->raiz && no->cor == Preto) {
+        contRubro++; // Conta a "subida" do problema do "duplo-preto"
+        if (no == no->pai->esquerda) {
+            NoRubro* irmao = no->pai->direita;
+            if (irmao->cor == Vermelho) { // Caso 1
+                irmao->cor = Preto;
+                no->pai->cor = Vermelho;
+                rotacionarEsquerda(arvore, no->pai);
+                irmao = no->pai->direita;
+            }
+            if (irmao->esquerda->cor == Preto && irmao->direita->cor == Preto) { // Caso 2
+                irmao->cor = Vermelho;
+                no = no->pai; // O problema sobe na árvore
+            } else {
+                if (irmao->direita->cor == Preto) { // Caso 3
+                    irmao->esquerda->cor = Preto;
+                    irmao->cor = Vermelho;
+                    rotacionarDireita(arvore, irmao);
+                    irmao = no->pai->direita;
+                }
+                // Caso 4
+                irmao->cor = no->pai->cor;
+                no->pai->cor = Preto;
+                irmao->direita->cor = Preto;
+                rotacionarEsquerda(arvore, no->pai);
+                no = arvore->raiz; // Problema resolvido
+            }
+        } else { // Casos simétricos
+            NoRubro* irmao = no->pai->esquerda;
+            if (irmao->cor == Vermelho) { // Caso 1
+                irmao->cor = Preto;
+                no->pai->cor = Vermelho;
+                rotacionarDireita(arvore, no->pai);
+                irmao = no->pai->esquerda;
+            }
+            if (irmao->direita->cor == Preto && irmao->esquerda->cor == Preto) { // Caso 2
+                irmao->cor = Vermelho;
+                no = no->pai;
+            } else {
+                if (irmao->esquerda->cor == Preto) { // Caso 3
+                    irmao->direita->cor = Preto;
+                    irmao->cor = Vermelho;
+                    rotacionarEsquerda(arvore, irmao);
+                    irmao = no->pai->esquerda;
+                }
+                // Caso 4
+                irmao->cor = no->pai->cor;
+                no->pai->cor = Preto;
+                irmao->esquerda->cor = Preto;
+                rotacionarDireita(arvore, no->pai);
+                no = arvore->raiz;
+            }
+        }
+    }
+    no->cor = Preto;
+}
+
+
+// --- FUNÇÕES AUXILIARES ---
+
+void transplantar(ArvoreRubro* arvore, NoRubro* u, NoRubro* v) {
+    if (u->pai == arvore->nulo) {
+        arvore->raiz = v;
+    } else if (u == u->pai->esquerda) {
+        u->pai->esquerda = v;
+    } else {
+        u->pai->direita = v;
+    }
+    v->pai = u->pai;
+}
+
+NoRubro* minimo(ArvoreRubro* arvore, NoRubro* no) {
+    while (no->esquerda != arvore->nulo) {
+        contRubro++; // Conta a "descida" para o mínimo
+        no = no->esquerda;
+    }
+    return no;
 }
 
 NoRubro* localizar(ArvoreRubro* arvore, int valor) {
-    if (!vazia(arvore)) {
-        NoRubro* noRubro = arvore->raiz;
-
-        while (noRubro != arvore->nulo) {
-            if (noRubro->valor == valor) {
-                return noRubro;
-            } else {
-                noRubro = valor < noRubro->valor ? noRubro->esquerda : noRubro->direita;
-            }
+    NoRubro* noRubro = arvore->raiz;
+    while (noRubro != arvore->nulo) {
+        if (noRubro->valor == valor) {
+            return noRubro;
         }
+        contRubro++; // Conta a "descida" na busca
+        noRubro = valor < noRubro->valor ? noRubro->esquerda : noRubro->direita;
     }
-
-    return NULL;
-}
-
-void percorrerProfundidadeInOrder(ArvoreRubro* arvore, NoRubro* noRubro, void (*callback)(int)) {
-    if (noRubro != arvore->nulo) {
-        
-        
-        percorrerProfundidadeInOrder(arvore, noRubro->esquerda,callback);
-        callback(noRubro->valor);
-        percorrerProfundidadeInOrder(arvore, noRubro->direita,callback);
-    }
-}
-
-void percorrerProfundidadePreOrder(ArvoreRubro* arvore, NoRubro* noRubro, void (*callback)(int)) {
-    if (noRubro != arvore->nulo) {
-        callback(noRubro->valor);
-        percorrerProfundidadePreOrder(arvore, noRubro->esquerda,callback);
-        percorrerProfundidadePreOrder(arvore, noRubro->direita,callback);
-    }
-}
-
-void percorrerProfundidadePosOrder(ArvoreRubro* arvore, NoRubro* noRubro, void (callback)(int)) {
-    if (noRubro != arvore->nulo) {
-        percorrerProfundidadePosOrder(arvore, noRubro->esquerda,callback);
-        percorrerProfundidadePosOrder(arvore, noRubro->direita,callback);
-        callback(noRubro->valor);
-    }
-}
-
-void visitar(int valor){
-    printf("%d ", valor);
-}
-
-void balancear(ArvoreRubro* arvore, NoRubro* noRubro) {
-    while (noRubro->pai->cor == Vermelho) {
-        if (noRubro->pai == noRubro->pai->pai->esquerda) {
-            NoRubro *tio = noRubro->pai->pai->direita;
-            
-            if (tio->cor == Vermelho) {
-                tio->cor = Preto; //Caso 1
-                noRubro->pai->cor = Preto; 
-
-                noRubro->pai->pai->cor = Vermelho; //Caso 1
-                noRubro = noRubro->pai->pai; //Caso 1
-            } else {
-                if (noRubro == noRubro->pai->direita) {
-                    noRubro = noRubro->pai; //Caso 2
-                    rotacionarEsquerda(arvore, noRubro); //Caso 2
-                } else {
-                    noRubro->pai->cor = Preto; 
-                    noRubro->pai->pai->cor = Vermelho; //Caso 3
-                    rotacionarDireita(arvore, noRubro->pai->pai); //Caso 3
-                }
-            }
-        } else {
-            NoRubro *tio = noRubro->pai->pai->esquerda;
-            
-            if (tio->cor == Vermelho) {
-                tio->cor = Preto; //Caso 1
-                noRubro->pai->cor = Preto; 
-
-                noRubro->pai->pai->cor = Vermelho; //Caso 1
-                noRubro = noRubro->pai->pai; //Caso 1
-            } else {
-                if (noRubro == noRubro->pai->esquerda) {
-                    noRubro = noRubro->pai; //Caso 2
-                    rotacionarDireita(arvore, noRubro); //Caso 2
-                } else {
-                    noRubro->pai->cor = Preto; 
-                    noRubro->pai->pai->cor = Vermelho; //Caso 3
-                    rotacionarEsquerda(arvore, noRubro->pai->pai); //Caso 3
-                }
-            }
-        }
-    }
-    arvore->raiz->cor = Preto; //Conserta possível quebra regra 2
+    return arvore->nulo; // Retorna o sentinela se não encontrar
 }
 
 void rotacionarEsquerda(ArvoreRubro* arvore, NoRubro* noRubro) {
     NoRubro* direita = noRubro->direita;
-    noRubro->direita = direita->esquerda; 
-
+    noRubro->direita = direita->esquerda;
     if (direita->esquerda != arvore->nulo) {
         direita->esquerda->pai = noRubro;
     }
-
     direita->pai = noRubro->pai;
-    
     if (noRubro->pai == arvore->nulo) {
         arvore->raiz = direita;
     } else if (noRubro == noRubro->pai->esquerda) {
@@ -200,7 +303,6 @@ void rotacionarEsquerda(ArvoreRubro* arvore, NoRubro* noRubro) {
     } else {
         noRubro->pai->direita = direita;
     }
-
     direita->esquerda = noRubro;
     noRubro->pai = direita;
 }
@@ -208,13 +310,10 @@ void rotacionarEsquerda(ArvoreRubro* arvore, NoRubro* noRubro) {
 void rotacionarDireita(ArvoreRubro* arvore, NoRubro* noRubro) {
     NoRubro* esquerda = noRubro->esquerda;
     noRubro->esquerda = esquerda->direita;
-    
     if (esquerda->direita != arvore->nulo) {
         esquerda->direita->pai = noRubro;
     }
-    
     esquerda->pai = noRubro->pai;
-    
     if (noRubro->pai == arvore->nulo) {
         arvore->raiz = esquerda;
     } else if (noRubro == noRubro->pai->esquerda) {
@@ -222,56 +321,54 @@ void rotacionarDireita(ArvoreRubro* arvore, NoRubro* noRubro) {
     } else {
         noRubro->pai->direita = esquerda;
     }
-    
     esquerda->direita = noRubro;
     noRubro->pai = esquerda;
 }
 
+// --- FUNÇÕES DE EXIBIÇÃO ---
+
+void percorrerProfundidadeInOrder(ArvoreRubro* arvore, NoRubro* noRubro, void (*callback)(int)) {
+    if (noRubro != arvore->nulo) {
+        percorrerProfundidadeInOrder(arvore, noRubro->esquerda, callback);
+        callback(noRubro->valor);
+        percorrerProfundidadeInOrder(arvore, noRubro->direita, callback);
+    }
+}
+
+void visitar(int valor) {
+    printf("%d ", valor);
+}
+
 int main() {
     ArvoreRubro* a = criar();
-    ArvoreRubro* b = criar();
-    ArvoreRubro* c = criar();
+    
+    printf("--- INSERINDO ELEMENTOS ---\n");
+    adicionar(a, 10);
+    adicionar(a, 85);
+    adicionar(a, 15);
+    adicionar(a, 70);
+    adicionar(a, 20);
+    adicionar(a, 60);
+    adicionar(a, 30);
+    adicionar(a, 50);
 
-    //Ordem 1 = qtdDeFolhas: 1+2 = 3
-    //Ordem 5 = qtdDeFolhas: 1+2+4+8+16+32 = 63
-    //Ordem 10 = qtdDeFolhas: 1+2+4+8+16+32+64+128+256+512+1024 = 2047
-    int qtdDeFolhas[3] = {3,63,2047};
-    ArvoreRubro* arvores[3] = {a,b,c};
-
-    srand(time(NULL));
-
-    // for (int x = 0; x < 3; x++)
-    // {
-    //     for (int i = 0; i < qtdDeFolhas[x]; i++)
-    //     {
-    //         adicionar(arvores[x],(rand() % 10000) + 1);
-    //     }
-    //     printf("In-order: ");
-    //     percorrerProfundidadeInOrder(arvores[x], arvores[x]->raiz,visitar);
-    //     printf("\n");
-    // }
-
-    int media[3] = {0,0,0};
-
-    for (int x = 0; x < 3; x++) //interação em cada ordem
-    {
-        for (int v = 0; v < 10; v++) //interação para definir as médias por ordem
-        {
-            contRubro = 0;
-            for (int i = 0; i < qtdDeFolhas[x]; i++)
-            {
-                adicionar(arvores[x],(rand() % 10000) + 1);
-            }
-            printf("In-order: ");
-            percorrerProfundidadeInOrder(arvores[x], arvores[x]->raiz,visitar);
-            printf("\nNúmero de operações: %d\n", contRubro);
-            media[x] += contRubro;
-            printf("\n");
-        }
-        
-        
-    }
-    printf("\nMédia de operações: %d\n", (media[0] / 10));
-    printf("\nMédia de operações: %d\n", (media[1] / 10));
-    printf("\nMédia de operações: %d\n", (media[2] / 10));
+    printf("\nIn-order inicial: ");
+    percorrerProfundidadeInOrder(a, a->raiz, visitar);
+    printf("\n");
+    printf("Contador Rubro-Negro apos insercoes: %d\n\n", contRubro);
+    
+    printf("--- REMOVENDO ELEMENTOS ---\n");
+    contRubro = 0; // Reseta para medir apenas as remoções
+    remover(a, 15);
+    remover(a, 70);
+    remover(a, 10);
+    
+    printf("\nIn-order final: ");
+    percorrerProfundidadeInOrder(a, a->raiz, visitar);
+    printf("\n");
+    printf("Contador Rubro-Negro nas remocoes: %d\n", contRubro);
+    
+    // free(a->nulo);
+    // free(a);
+    return 0;
 }
