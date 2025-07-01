@@ -1,13 +1,3 @@
-/**
- * @file comparacao_arvores.c
- * @brief Programa para análise de complexidade algorítmica entre Árvores AVL,
- * Rubro-Negra e B.
- * @details Este programa realiza um experimento para medir o "esforço"
- * (número de operações chave) de inserção e remoção em diferentes
- * estruturas de dados de árvore auto-balanceadas. Os resultados
- * são salvos em arquivos CSV para análise posterior.
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,14 +5,9 @@
 #include <time.h>
 
 /* ============================================================================= */
-/* --- SEÇÃO DE UTILITÁRIOS E LÓGICA DO EXPERIMENTO --- */
+/* --- FUNÇÕES UTILITÁRIAS --- */
 /* ============================================================================= */
 
-/**
- * @brief Embaralha um array de inteiros utilizando o algoritmo Fisher-Yates.
- * @param array O array a ser embaralhado.
- * @param n O número de elementos no array.
- */
 void embaralhar(int *array, size_t n) {
     if (n > 1) {
         for (size_t i = n - 1; i > 0; i--) {
@@ -40,7 +25,6 @@ void embaralhar(int *array, size_t n) {
 
 int contAVL = 0;
 
-// Definições de Tipos
 typedef struct noAVL {
     struct noAVL* pai;
     struct noAVL* esquerda;
@@ -53,7 +37,6 @@ typedef struct arvoreAVL {
     struct noAVL* raiz;
 } ArvoreAVL;
 
-// Protótipos de Funções
 ArvoreAVL* avl_criar();
 void avl_destruir(ArvoreAVL* arvore);
 void avl_adicionar(ArvoreAVL* arvore, int valor);
@@ -61,8 +44,6 @@ void avl_remover(ArvoreAVL* arvore, int valor);
 int avl_altura(NoAVL* no);
 int avl_fb(NoAVL* no);
 void avl_percorrer(NoAVL* no, void (*callback)(int));
-
-// Protótipos de Funções Internas
 int avl_maximo(int a, int b);
 void avl_balanceamento(ArvoreAVL* arvore, NoAVL* no);
 NoAVL* avl_rsd(ArvoreAVL* arvore, NoAVL* no);
@@ -74,7 +55,6 @@ void avl_removerNo(ArvoreAVL* arvore, NoAVL* noRemover);
 NoAVL* avl_minimo(NoAVL* no);
 void avl_destruir_no(NoAVL* no);
 
-// Implementação das Funções
 int avl_maximo(int a, int b) {
     return a > b ? a : b;
 }
@@ -129,24 +109,26 @@ void avl_adicionar(ArvoreAVL* arvore, int valor) {
 
 void avl_balanceamento(ArvoreAVL* arvore, NoAVL* no) {
     while (no != NULL) {
-        contAVL++;
         no->altura = 1 + avl_maximo(avl_altura(no->esquerda), avl_altura(no->direita));
         int fator = avl_fb(no);
 
-        if (fator > 1) { // Pesa para a esquerda
+        if (fator > 1) {
             if (avl_fb(no->esquerda) >= 0) {
                 avl_rsd(arvore, no);
             } else {
                 avl_rdd(arvore, no);
             }
-        } else if (fator < -1) { // Pesa para a direita
+        } else if (fator < -1) {
             if (avl_fb(no->direita) <= 0) {
                 avl_rse(arvore, no);
             } else {
                 avl_rde(arvore, no);
             }
         }
-        no = no->pai;
+        
+        NoAVL* pai = no->pai;
+        if(pai != NULL) contAVL++;
+        no = pai;
     }
 }
 
@@ -253,9 +235,6 @@ void avl_remover(ArvoreAVL* arvore, int valor) {
     NoAVL* noRemover = avl_localizar(arvore->raiz, valor);
     if (noRemover != NULL) {
         avl_removerNo(arvore, noRemover);
-    } else {
-        // Opcional: Log de erro se a chave não for encontrada.
-        // printf("AVL: Valor %d nao encontrado para remocao.\n", valor);
     }
 }
 
@@ -286,7 +265,6 @@ void avl_destruir(ArvoreAVL* arvore) {
 
 int contB = 0;
 
-// Definições de Tipos
 typedef struct noB {
     int total;
     int* chaves;
@@ -299,14 +277,11 @@ typedef struct arvoreB {
     int ordem;
 } ArvoreB;
 
-// Protótipos de Funções
 ArvoreB* btree_criar(int ordem);
 void btree_destruir(ArvoreB* arvore);
 void btree_adicionar(ArvoreB* arvore, int chave);
 void btree_remover(ArvoreB* arvore, int chave);
 void btree_percorrer(NoB* no);
-
-// Protótipos de Funções Internas
 NoB* btree_criaNo(ArvoreB* arvore);
 int btree_pesquisaBinaria(NoB* no, int chave);
 NoB* btree_localizaNo(ArvoreB* arvore, int chave);
@@ -324,7 +299,6 @@ void fundir_com_proximo(ArvoreB* arvore, NoB* no, int idx);
 NoB* btree_getPredecessor(ArvoreB* arvore, NoB* no, int pos);
 void btree_destruir_no(NoB* no);
 
-// Implementação das Funções
 ArvoreB* btree_criar(int ordem) {
     ArvoreB* a = malloc(sizeof(ArvoreB));
     a->ordem = ordem;
@@ -366,8 +340,7 @@ void btree_remover(ArvoreB* arvore, int chave) {
 int btree_pesquisaBinaria(NoB* no, int chave) {
     int inicio = 0, fim = no->total - 1, meio;
     while (inicio <= fim) {
-        contB++;
-        meio = inicio + (fim - inicio) / 2; // Evita overflow para grandes arrays
+        meio = inicio + (fim - inicio) / 2;
         if (no->chaves[meio] == chave) return meio;
         if (no->chaves[meio] > chave) fim = meio - 1;
         else inicio = meio + 1;
@@ -378,16 +351,16 @@ int btree_pesquisaBinaria(NoB* no, int chave) {
 NoB* btree_localizaNo(ArvoreB* arvore, int chave) {
     NoB* no = arvore->raiz;
     while (no != NULL) {
-        contB++;
         int i = btree_pesquisaBinaria(no, chave);
         if (no->filhos[i] == NULL) return no;
+        
+        contB++;
         no = no->filhos[i];
     }
     return NULL;
 }
 
 void btree_adicionar_recursivo(ArvoreB* arvore, NoB* no, NoB* novo, int chave) {
-    contB++;
     btree_adicionaChaveNo(no, novo, chave);
 
     if (btree_transbordo(arvore, no)) {
@@ -395,14 +368,15 @@ void btree_adicionar_recursivo(ArvoreB* arvore, NoB* no, NoB* novo, int chave) {
         NoB* novoNo = btree_divideNo(arvore, no);
 
         if (no->pai == NULL) {
-            contB++;
             NoB* pai = btree_criaNo(arvore);
             pai->filhos[0] = no;
             btree_adicionaChaveNo(pai, novoNo, promovido);
             no->pai = pai;
             novoNo->pai = pai;
             arvore->raiz = pai;
+            contB++; 
         } else {
+            contB++;
             btree_adicionar_recursivo(arvore, no->pai, novoNo, promovido);
         }
     }
@@ -410,7 +384,6 @@ void btree_adicionar_recursivo(ArvoreB* arvore, NoB* no, NoB* novo, int chave) {
 
 void btree_adicionaChaveNo(NoB* no, NoB* novo, int chave) {
     int i = btree_pesquisaBinaria(no, chave);
-    contB++;
 
     for (int j = no->total - 1; j >= i; j--) {
         no->chaves[j + 1] = no->chaves[j];
@@ -427,7 +400,6 @@ NoB* btree_divideNo(ArvoreB* arvore, NoB* no) {
     int meio = no->total / 2;
     NoB* novo = btree_criaNo(arvore);
     novo->pai = no->pai;
-    contB++;
 
     for (int i = meio + 1; i < no->total; i++) {
         novo->filhos[novo->total] = no->filhos[i];
@@ -443,21 +415,19 @@ NoB* btree_divideNo(ArvoreB* arvore, NoB* no) {
 }
 
 int btree_transbordo(ArvoreB* arvore, NoB* no) {
-    contB++;
     return no->total > arvore->ordem * 2;
 }
 
 void btree_remover_interno(ArvoreB* arvore, NoB* no, int chave) {
-    contB++;
     int idx = btree_pesquisaBinaria(no, chave);
 
-    if (idx < no->total && no->chaves[idx] == chave) { // Chave encontrada neste nó
-        if (no->filhos[0] == NULL) // É um nó folha
+    if (idx < no->total && no->chaves[idx] == chave) {
+        if (no->filhos[0] == NULL)
             remover_de_folha(no, idx);
-        else // É um nó interno
+        else
             remover_de_nao_folha(arvore, no, idx);
-    } else { // Chave não encontrada, descer na árvore
-        if (no->filhos[0] == NULL) return; // Chave não existe
+    } else {
+        if (no->filhos[0] == NULL) return;
 
         bool ultimo_filho = (idx == no->total);
         if (no->filhos[idx]->total < arvore->ordem) {
@@ -465,8 +435,10 @@ void btree_remover_interno(ArvoreB* arvore, NoB* no, int chave) {
         }
 
         if (ultimo_filho && idx > no->total) {
+            contB++; 
             btree_remover_interno(arvore, no->filhos[idx - 1], chave);
         } else {
+            contB++; 
             btree_remover_interno(arvore, no->filhos[idx], chave);
         }
     }
@@ -621,7 +593,6 @@ void btree_destruir(ArvoreB* arvore) {
 
 int contRubro = 0;
 
-// Definições de Tipos
 typedef enum { Vermelho, Preto } Cor;
 
 typedef struct noRubro {
@@ -634,17 +605,14 @@ typedef struct noRubro {
 
 typedef struct arvoreRubro {
     struct noRubro* raiz;
-    struct noRubro* nulo; // Nó sentinela
+    struct noRubro* nulo;
 } ArvoreRubro;
 
-// Protótipos de Funções
 ArvoreRubro* rb_criar();
 void rb_destruir(ArvoreRubro* arvore);
 void rb_adicionar(ArvoreRubro* arvore, int valor);
 void rb_remover(ArvoreRubro* arvore, int valor);
 void rb_percorrer(ArvoreRubro* arvore, NoRubro* no, void (*callback)(int));
-
-// Protótipos de Funções Internas
 bool rb_vazia(ArvoreRubro* arvore);
 NoRubro* rb_criarNo(ArvoreRubro* arvore, NoRubro* pai, int valor);
 NoRubro* rb_adicionarNo(ArvoreRubro* arvore, NoRubro* no, int valor);
@@ -658,7 +626,6 @@ void rb_rotacionarEsquerda(ArvoreRubro* arvore, NoRubro* no);
 void rb_rotacionarDireita(ArvoreRubro* arvore, NoRubro* no);
 void rb_destruir_no(ArvoreRubro* arvore, NoRubro* no);
 
-// Implementação das Funções
 ArvoreRubro* rb_criar() {
     ArvoreRubro *arvore = malloc(sizeof(ArvoreRubro));
     arvore->nulo = malloc(sizeof(NoRubro));
@@ -696,25 +663,25 @@ void rb_adicionar(ArvoreRubro* arvore, int valor) {
 }
 
 NoRubro* rb_adicionarNo(ArvoreRubro* arvore, NoRubro* no, int valor) {
-    contRubro++;
-    if (valor > no->valor) {
+    if (valor >= no->valor) {
         if (no->direita == arvore->nulo) {
             no->direita = rb_criarNo(arvore, no, valor);
             return no->direita;
         }
+        contRubro++;
         return rb_adicionarNo(arvore, no->direita, valor);
     } else {
         if (no->esquerda == arvore->nulo) {
             no->esquerda = rb_criarNo(arvore, no, valor);
             return no->esquerda;
         }
+        contRubro++;
         return rb_adicionarNo(arvore, no->esquerda, valor);
     }
 }
 
 void rb_balancear_insercao(ArvoreRubro* arvore, NoRubro* no) {
     while (no != arvore->raiz && no->pai->cor == Vermelho) {
-        contRubro++;
         NoRubro* pai = no->pai;
         NoRubro* avo = pai->pai;
         if (pai == avo->esquerda) {
@@ -762,9 +729,6 @@ void rb_remover(ArvoreRubro* arvore, int valor) {
     NoRubro* noRemover = rb_localizar(arvore, valor);
     if (noRemover != arvore->nulo) {
         rb_removerNo(arvore, noRemover);
-    } else {
-        // Opcional: Log de erro se a chave não for encontrada.
-        // printf("Rubro-Negra: Valor %d nao encontrado para remocao.\n", valor);
     }
 }
 
@@ -935,9 +899,8 @@ void rb_destruir(ArvoreRubro* arvore) {
 /* --- FUNÇÃO PRINCIPAL (DRIVER DO EXPERIMENTO) --- */
 /* ============================================================================= */
 int main() {
-    // --- Configurações do Experimento ---
     const int MAX_N = 10000;
-    const int PASSO = 250; // Aumentado para execuções mais rápidas
+    const int PASSO = 1;
     const int NUM_AMOSTRAS = 10;
     const int MAX_VALOR_CHAVE = 100000;
 
@@ -951,25 +914,21 @@ int main() {
         return 1;
     }
 
-    // Escreve os cabeçalhos dos arquivos CSV
     fprintf(f_adicao, "Tamanho,AVL,RubroNegra,B_Ordem_1,B_Ordem_5,B_Ordem_10\n");
     fprintf(f_remocao, "Tamanho,AVL,RubroNegra,B_Ordem_1,B_Ordem_5,B_Ordem_10\n");
 
     printf("Iniciando experimento de comparacao de arvores...\n");
     printf("Gerando resultados para N de %d a %d (passo de %d), com %d amostras cada.\n", PASSO, MAX_N, PASSO, NUM_AMOSTRAS);
 
-    // Loop principal para variar o tamanho do conjunto de dados (N)
-    for (int N = 0; N <= MAX_N; N += PASSO) {
+    for (int N = PASSO; N <= MAX_N; N += PASSO) {
         long long soma_adicao_avl = 0, soma_remocao_avl = 0;
         long long soma_adicao_rb = 0, soma_remocao_rb = 0;
         long long soma_adicao_b1 = 0, soma_remocao_b1 = 0;
         long long soma_adicao_b5 = 0, soma_remocao_b5 = 0;
         long long soma_adicao_b10 = 0, soma_remocao_b10 = 0;
 
-        // Loop para as amostras para garantir validade estatística
         for (int amostra = 0; amostra < NUM_AMOSTRAS; amostra++) {
             
-            // --- Fase 1: Geração de chaves aleatórias e únicas ---
             int* chaves = malloc(sizeof(int) * N);
             bool* numeros_usados = calloc(MAX_VALOR_CHAVE, sizeof(bool));
             if (chaves == NULL || numeros_usados == NULL) {
@@ -987,9 +946,6 @@ int main() {
             }
             free(numeros_usados);
 
-            // --- Fase 2: Execução dos testes para cada estrutura ---
-            
-            // Teste AVL
             ArvoreAVL* avl = avl_criar();
             contAVL = 0;
             for(int i = 0; i < N; i++) avl_adicionar(avl, chaves[i]);
@@ -1001,7 +957,6 @@ int main() {
             soma_remocao_avl += contAVL;
             avl_destruir(avl);
 
-            // Teste Rubro-Negra
             ArvoreRubro* rb = rb_criar();
             contRubro = 0;
             for(int i = 0; i < N; i++) rb_adicionar(rb, chaves[i]);
@@ -1013,7 +968,6 @@ int main() {
             soma_remocao_rb += contRubro;
             rb_destruir(rb);
 
-            // Teste B-Tree Ordem 1
             ArvoreB* b1 = btree_criar(1);
             contB = 0;
             for(int i = 0; i < N; i++) btree_adicionar(b1, chaves[i]);
@@ -1025,7 +979,6 @@ int main() {
             soma_remocao_b1 += contB;
             btree_destruir(b1);
 
-            // Teste B-Tree Ordem 5
             ArvoreB* b5 = btree_criar(5);
             contB = 0;
             for(int i = 0; i < N; i++) btree_adicionar(b5, chaves[i]);
@@ -1037,7 +990,6 @@ int main() {
             soma_remocao_b5 += contB;
             btree_destruir(b5);
 
-            // Teste B-Tree Ordem 10
             ArvoreB* b10 = btree_criar(10);
             contB = 0;
             for(int i = 0; i < N; i++) btree_adicionar(b10, chaves[i]);
@@ -1052,7 +1004,6 @@ int main() {
             free(chaves);
         }
 
-        // --- Fase 3: Cálculo da média e gravação dos resultados ---
         fprintf(f_adicao, "%d,%lld,%lld,%lld,%lld,%lld\n", N,
                 soma_adicao_avl / NUM_AMOSTRAS, soma_adicao_rb / NUM_AMOSTRAS,
                 soma_adicao_b1 / NUM_AMOSTRAS, soma_adicao_b5 / NUM_AMOSTRAS,
