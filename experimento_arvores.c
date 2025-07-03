@@ -109,6 +109,7 @@ void avl_adicionar(ArvoreAVL* arvore, int valor) {
 
 void avl_balanceamento(ArvoreAVL* arvore, NoAVL* no) {
     while (no != NULL) {
+        contAVL++;
         no->altura = 1 + avl_maximo(avl_altura(no->esquerda), avl_altura(no->direita));
         int fator = avl_fb(no);
 
@@ -126,13 +127,12 @@ void avl_balanceamento(ArvoreAVL* arvore, NoAVL* no) {
             }
         }
         
-        NoAVL* pai = no->pai;
-        if(pai != NULL) contAVL++;
-        no = pai;
+        no = no->pai;
     }
 }
 
 NoAVL* avl_rse(ArvoreAVL* arvore, NoAVL* no) {
+    contAVL++;
     NoAVL* pai = no->pai;
     NoAVL* direita = no->direita;
 
@@ -155,6 +155,7 @@ NoAVL* avl_rse(ArvoreAVL* arvore, NoAVL* no) {
 }
 
 NoAVL* avl_rsd(ArvoreAVL* arvore, NoAVL* no) {
+    contAVL++;
     NoAVL* pai = no->pai;
     NoAVL* esquerda = no->esquerda;
 
@@ -177,11 +178,13 @@ NoAVL* avl_rsd(ArvoreAVL* arvore, NoAVL* no) {
 }
 
 NoAVL* avl_rde(ArvoreAVL* arvore, NoAVL* no) {
+    contAVL+=2;
     no->direita = avl_rsd(arvore, no->direita);
     return avl_rse(arvore, no);
 }
 
 NoAVL* avl_rdd(ArvoreAVL* arvore, NoAVL* no) {
+    contAVL+=2;
     no->esquerda = avl_rse(arvore, no->esquerda);
     return avl_rsd(arvore, no);
 }
@@ -204,6 +207,7 @@ NoAVL* avl_minimo(NoAVL* no) {
 }
 
 void avl_removerNo(ArvoreAVL* arvore, NoAVL* noRemover) {
+    contAVL++;
     NoAVL* noPai = noRemover->pai;
     NoAVL* filho = (noRemover->esquerda != NULL) ? noRemover->esquerda : noRemover->direita;
 
@@ -232,6 +236,7 @@ void avl_removerNo(ArvoreAVL* arvore, NoAVL* noRemover) {
 }
 
 void avl_remover(ArvoreAVL* arvore, int valor) {
+    contAVL++;
     NoAVL* noRemover = avl_localizar(arvore->raiz, valor);
     if (noRemover != NULL) {
         avl_removerNo(arvore, noRemover);
@@ -323,6 +328,7 @@ void btree_adicionar(ArvoreB* arvore, int chave) {
 }
 
 void btree_remover(ArvoreB* arvore, int chave) {
+    contB++;
     if (!arvore->raiz) return;
 
     btree_remover_interno(arvore, arvore->raiz, chave);
@@ -338,8 +344,10 @@ void btree_remover(ArvoreB* arvore, int chave) {
 }
 
 int btree_pesquisaBinaria(NoB* no, int chave) {
+    
     int inicio = 0, fim = no->total - 1, meio;
     while (inicio <= fim) {
+        contB++;
         meio = inicio + (fim - inicio) / 2;
         if (no->chaves[meio] == chave) return meio;
         if (no->chaves[meio] > chave) fim = meio - 1;
@@ -400,6 +408,8 @@ NoB* btree_divideNo(ArvoreB* arvore, NoB* no) {
     int meio = no->total / 2;
     NoB* novo = btree_criaNo(arvore);
     novo->pai = no->pai;
+
+    contB++;
 
     for (int i = meio + 1; i < no->total; i++) {
         novo->filhos[novo->total] = no->filhos[i];
@@ -663,19 +673,18 @@ void rb_adicionar(ArvoreRubro* arvore, int valor) {
 }
 
 NoRubro* rb_adicionarNo(ArvoreRubro* arvore, NoRubro* no, int valor) {
+    contRubro++;
     if (valor >= no->valor) {
         if (no->direita == arvore->nulo) {
             no->direita = rb_criarNo(arvore, no, valor);
             return no->direita;
         }
-        contRubro++;
         return rb_adicionarNo(arvore, no->direita, valor);
     } else {
         if (no->esquerda == arvore->nulo) {
             no->esquerda = rb_criarNo(arvore, no, valor);
             return no->esquerda;
         }
-        contRubro++;
         return rb_adicionarNo(arvore, no->esquerda, valor);
     }
 }
@@ -691,11 +700,9 @@ void rb_balancear_insercao(ArvoreRubro* arvore, NoRubro* no) {
                 pai->cor = Preto;
                 avo->cor = Vermelho;
                 no = avo;
-                contRubro += 2;
             } else {
                 if (no == pai->direita) {
                     no = pai;
-                    contRubro++;
                     rb_rotacionarEsquerda(arvore, no);
                 }
                 no->pai->cor = Preto;
@@ -709,11 +716,9 @@ void rb_balancear_insercao(ArvoreRubro* arvore, NoRubro* no) {
                 pai->cor = Preto;
                 avo->cor = Vermelho;
                 no = avo;
-                contRubro += 2;
             } else {
                 if (no == pai->esquerda) {
                     no = pai;
-                    contRubro++;
                     rb_rotacionarDireita(arvore, no);
                 }
                 no->pai->cor = Preto;
@@ -721,6 +726,7 @@ void rb_balancear_insercao(ArvoreRubro* arvore, NoRubro* no) {
                 rb_rotacionarEsquerda(arvore, no->pai->pai);
             }
         }
+        contRubro+=2;
     }
     arvore->raiz->cor = Preto;
 }
@@ -900,7 +906,7 @@ void rb_destruir(ArvoreRubro* arvore) {
 /* ============================================================================= */
 int main() {
     const int MAX_N = 10000;
-    const int PASSO = 1;
+    const int PASSO = 250;
     const int NUM_AMOSTRAS = 10;
     const int MAX_VALOR_CHAVE = 100000;
 
