@@ -361,8 +361,7 @@ NoB* btree_localizaNo(ArvoreB* arvore, int chave) {
     while (no != NULL) {
         int i = btree_pesquisaBinaria(no, chave);
         if (no->filhos[i] == NULL) return no;
-        
-        contB++;
+        contB++;      
         no = no->filhos[i];
     }
     return NULL;
@@ -445,10 +444,10 @@ void btree_remover_interno(ArvoreB* arvore, NoB* no, int chave) {
         }
 
         if (ultimo_filho && idx > no->total) {
-            contB++; 
+            //contB++; 
             btree_remover_interno(arvore, no->filhos[idx - 1], chave);
         } else {
-            contB++; 
+            //contB++; 
             btree_remover_interno(arvore, no->filhos[idx], chave);
         }
     }
@@ -495,6 +494,7 @@ void preencher_filho(ArvoreB* arvore, NoB* no, int idx_filho) {
 }
 
 void emprestar_do_anterior(NoB* no, int idx) {
+    contB++; //add
     NoB* filho = no->filhos[idx];
     NoB* irmao = no->filhos[idx - 1];
 
@@ -515,6 +515,7 @@ void emprestar_do_anterior(NoB* no, int idx) {
 }
 
 void emprestar_do_proximo(NoB* no, int idx) {
+    contB++; //add
     NoB* filho = no->filhos[idx];
     NoB* irmao = no->filhos[idx + 1];
 
@@ -535,6 +536,7 @@ void emprestar_do_proximo(NoB* no, int idx) {
 }
 
 void fundir_com_proximo(ArvoreB* arvore, NoB* no, int idx) {
+    contB++; //add
     NoB* filho = no->filhos[idx];
     NoB* irmao = no->filhos[idx + 1];
 
@@ -732,6 +734,7 @@ void rb_balancear_insercao(ArvoreRubro* arvore, NoRubro* no) {
 }
 
 void rb_remover(ArvoreRubro* arvore, int valor) {
+    contRubro++;
     NoRubro* noRemover = rb_localizar(arvore, valor);
     if (noRemover != arvore->nulo) {
         rb_removerNo(arvore, noRemover);
