@@ -909,7 +909,7 @@ void rb_destruir(ArvoreRubro* arvore) {
 /* ============================================================================= */
 int main() {
     const int MAX_N = 10000;
-    const int PASSO = 250;
+    const int PASSO = 150;
     const int NUM_AMOSTRAS = 10;
     const int MAX_VALOR_CHAVE = 100000;
 
@@ -929,7 +929,7 @@ int main() {
     printf("Iniciando experimento de comparacao de arvores...\n");
     printf("Gerando resultados para N de %d a %d (passo de %d), com %d amostras cada.\n", PASSO, MAX_N, PASSO, NUM_AMOSTRAS);
 
-    for (int N = PASSO; N <= MAX_N; N += PASSO) {
+    for (int N = 0; N <= MAX_N; N += PASSO) {
         long long soma_adicao_avl = 0, soma_remocao_avl = 0;
         long long soma_adicao_rb = 0, soma_remocao_rb = 0;
         long long soma_adicao_b1 = 0, soma_remocao_b1 = 0;
