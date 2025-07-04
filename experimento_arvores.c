@@ -1047,7 +1047,7 @@ void rb_destruir(ArvoreRubro* arvore) {
 /* ============================================================================= */
 int main() {
     const int MAX_N = 10000;
-    const int PASSO = 1;
+    const int PASSO = 300;
     const int NUM_AMOSTRAS = 10;
     const int MAX_VALOR_CHAVE = 100000;
 
