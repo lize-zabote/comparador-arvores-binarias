@@ -501,12 +501,10 @@ NoB *btree_localizaNo(ArvoreB *arvore, int chave)
 
 void btree_adicionar_recursivo(ArvoreB* arvore, NoB* no, NoB* novo, int chave) {
     btree_adicionaChaveNo(no, novo, chave);
-
     if (btree_transbordo(arvore, no)) {
         int promovido = no->chaves[arvore->ordem];
         NoB* novoNo = btree_divideNo(arvore, no);
         contB++; // Contar só a divisão
-
         if (no->pai == NULL) {
             NoB* pai = btree_criaNo(arvore);
             pai->filhos[0] = no;
@@ -539,7 +537,6 @@ NoB* btree_divideNo(ArvoreB* arvore, NoB* no) {
     int meio = no->total / 2;
     NoB* novo = btree_criaNo(arvore);
     novo->pai = no->pai;
-
     for (int i = meio + 1; i < no->total; i++) {
         novo->filhos[novo->total] = no->filhos[i];
         if (novo->filhos[novo->total] != NULL) {
@@ -550,7 +547,6 @@ NoB* btree_divideNo(ArvoreB* arvore, NoB* no) {
     }
     novo->filhos[novo->total] = no->filhos[no->total];
     if (novo->filhos[novo->total] != NULL) novo->filhos[novo->total]->pai = novo;
-
     no->total = meio;
     return novo;
 }
