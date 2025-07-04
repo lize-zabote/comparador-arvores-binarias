@@ -412,35 +412,26 @@ ArvoreB *btree_criar(int ordem)
     return a;
 }
 
-NoB *btree_criaNo(ArvoreB *arvore)
-{
+NoB* btree_criaNo(ArvoreB* arvore) {
     int max = arvore->ordem * 2;
-    NoB *no = malloc(sizeof(NoB));
-    if (no == NULL)
-        return NULL; // added null check
+    NoB* no = malloc(sizeof(NoB));
+    if (no == NULL) return NULL;
     no->pai = NULL;
     no->chaves = malloc(sizeof(int) * (max + 1));
-    no->filhos = malloc(sizeof(NoB *) * (max + 2));
-    if (no->chaves == NULL || no->filhos == NULL)
-    {
+    no->filhos = malloc(sizeof(NoB*) * (max + 2));
+    if (no->chaves == NULL || no->filhos == NULL) {
         free(no->chaves);
         free(no->filhos);
         free(no);
-        return NULL; // added null check
+        return NULL;
     }
     no->total = 0;
-    for (int i = 0; i < max + 2; i++)
-    {
-        contB++; // count loop iteration
-        no->filhos[i] = NULL;
-    }
+    for (int i = 0; i < max + 2; i++) no->filhos[i] = NULL;
     return no;
 }
 
-void btree_adicionar(ArvoreB *arvore, int chave)
-{
-    NoB *no = btree_localizaNo(arvore, chave);
-    contB++; // count operation
+void btree_adicionar(ArvoreB* arvore, int chave) {
+    NoB* no = btree_localizaNo(arvore, chave);
     btree_adicionar_recursivo(arvore, no, NULL, chave);
 }
 
@@ -465,51 +456,61 @@ void btree_remover(ArvoreB *arvore, int chave)
     }
 }
 
-int btree_pesquisaBinaria(NoB *no, int chave)
-{
-    int inicio = 0, fim = no->total - 1, meio;
-    while (inicio <= fim)
-    {
-        contB++; // count comparison
-        meio = inicio + (fim - inicio) / 2;
-        contB++; // count comparison
-        if (no->chaves[meio] == chave)
-            return meio;
-        contB++; // count comparison
-        if (no->chaves[meio] > chave)
-            fim = meio - 1;
-        else
-            inicio = meio + 1;
+int btree_pesquisaBinaria(NoB* no, int chave) {
+    int inicio = 0, fim = no->total - 1;
+    while (inicio <= fim) {
+        int meio = inicio + (fim - inicio) / 2;
+        if (no->chaves[meio] == chave) return meio;
+        if (no->chaves[meio] > chave) fim = meio - 1;
+        else inicio = meio + 1;
     }
     return inicio;
 }
 
 NoB* btree_localizaNo(ArvoreB* arvore, int chave) {
     NoB* no = arvore->raiz;
-    int count = 0;
+    int profundidade = 0;
     while (no != NULL) {
-        count++;
+        profundidade++;
         int i = btree_pesquisaBinaria(no, chave);
         if (no->filhos[i] == NULL) {
-            contB += count; // Count total node visits
+            contB += profundidade; // Conta níveis visitados
             return no;
         }
         no = no->filhos[i];
     }
-    contB += count; // Count total node visits
+    contB += profundidade; // Conta níveis visitados
     return NULL;
 }
 
 void btree_adicionar_recursivo(ArvoreB* arvore, NoB* no, NoB* novo, int chave) {
-    btree_adicionaChaveNo(no, novo, chave);
-    if (btree_transbordo(arvore, no)) {
+    // Adiciona chave sem incrementar contB aqui
+    int i = btree_pesquisaBinaria(no, chave);
+    for (int j = no->total - 1; j >= i; j--) {
+        no->chaves[j + 1] = no->chaves[j];
+        no->filhos[j + 2] = no->filhos[j + 1];
+    }
+    no->chaves[i] = chave;
+    no->filhos[i + 1] = novo;
+    if (novo != NULL) novo->pai = no;
+    no->total++;
+
+    if (no->total > arvore->ordem * 2) { // Transbordo
         int promovido = no->chaves[arvore->ordem];
         NoB* novoNo = btree_divideNo(arvore, no);
-        contB++; // Count split
+        contB++; // Conta só a divisão
         if (no->pai == NULL) {
             NoB* pai = btree_criaNo(arvore);
             pai->filhos[0] = no;
-            btree_adicionaChaveNo(pai, novoNo, promovido);
+            // Adiciona chave no pai sem incrementar contB
+            int k = btree_pesquisaBinaria(pai, promovido);
+            for (int j = pai->total - 1; j >= k; j--) {
+                pai->chaves[j + 1] = pai->chaves[j];
+                pai->filhos[j + 2] = pai->filhos[j + 1];
+            }
+            pai->chaves[k] = promovido;
+            pai->filhos[k + 1] = novoNo;
+            pai->total++;
             no->pai = pai;
             novoNo->pai = pai;
             arvore->raiz = pai;
