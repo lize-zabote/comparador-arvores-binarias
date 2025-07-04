@@ -1,14 +1,21 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
-def gerar_grafico(caminho_csv, titulo_grafico, nome_arquivo_saida, escala_y_log=False):
+def gerar_grafico(caminho_csv, titulo_grafico, nome_arquivo_saida, escala_y_log=False, estruturas=None):
     try:
         df = pd.read_csv(caminho_csv)
+        
+        if df.empty:
+            print(f"Erro: O arquivo '{caminho_csv}' está vazio.")
+            return
         
         plt.style.use('seaborn-v0_8-whitegrid')
         plt.figure(figsize=(12, 8))
 
-        for coluna in df.columns[1:]:
+        # Filter columns to plot (default to all except 'Tamanho' if estruturas is None)
+        colunas = [col for col in df.columns[1:] if col in estruturas] if estruturas else df.columns[1:]
+        
+        for coluna in colunas:
             if df[coluna].sum() > 0:
                 plt.plot(df['Tamanho'], df[coluna], label=coluna, marker='o', markersize=2, linestyle='-')
         
@@ -24,28 +31,30 @@ def gerar_grafico(caminho_csv, titulo_grafico, nome_arquivo_saida, escala_y_log=
         plt.ticklabel_format(style='plain', axis='x')
 
         if not escala_y_log:
-             plt.ticklabel_format(style='plain', axis='y')
+            plt.ticklabel_format(style='plain', axis='y')
 
         plt.tight_layout()
         plt.savefig(nome_arquivo_saida, dpi=300)
         print(f"Gráfico '{nome_arquivo_saida}' gerado com sucesso!")
         
         plt.show()
+        plt.close()
 
     except FileNotFoundError:
         print(f"Erro: O arquivo '{caminho_csv}' não foi encontrado.")
+    except pd.errors.EmptyDataError:
+        print(f"Erro: O arquivo '{caminho_csv}' está vazio ou inválido.")
     except Exception as e:
         print(f"Ocorreu um erro inesperado: {e}")
 
 if __name__ == "__main__":
+    # Generate combined graphs (log scale)
     gerar_grafico(
         caminho_csv='resultados_adicao.csv',
         titulo_grafico='Desempenho de Adição: Comparativo de Árvores (Eixo Y Log)',
         nome_arquivo_saida='grafico_adicao_log.png',
-        escala_y_log=True 
+        escala_y_log=True
     )
-
-    print("-" * 30)
 
     gerar_grafico(
         caminho_csv='resultados_remocao.csv',
@@ -53,3 +62,43 @@ if __name__ == "__main__":
         nome_arquivo_saida='grafico_remocao_log.png',
         escala_y_log=True
     )
+
+    print("-" * 30)
+
+    # Generate combined graphs (linear scale)
+    gerar_grafico(
+        caminho_csv='resultados_adicao.csv',
+        titulo_grafico='Desempenho de Adição: Comparativo de Árvores (Eixo Y Linear)',
+        nome_arquivo_saida='grafico_adicao_linear.png',
+        escala_y_log=False
+    )
+
+    gerar_grafico(
+        caminho_csv='resultados_remocao.csv',
+        titulo_grafico='Desempenho de Remoção: Comparativo de Árvores (Eixo Y Linear)',
+        nome_arquivo_saida='grafico_remocao_linear.png',
+        escala_y_log=False
+    )
+
+    print("-" * 30)
+
+    # Generate separate graphs for each B-Tree order vs AVL and Red-Black
+    ordens = ['B_Ordem_1', 'B_Ordem_5', 'B_Ordem_10']
+    for ordem in ordens:
+        gerar_grafico(
+            caminho_csv='resultados_adicao.csv',
+            titulo_grafico=f'Desempenho de Adição: AVL, RubroNegra e {ordem} (Eixo Y Log)',
+            nome_arquivo_saida=f'grafico_adicao_{ordem}_log.png',
+            escala_y_log=True,
+            estruturas=['AVL', 'RubroNegra', ordem]
+        )
+
+        gerar_grafico(
+            caminho_csv='resultados_remocao.csv',
+            titulo_grafico=f'Desempenho de Remoção: AVL, RubroNegra e {ordem} (Eixo Y Log)',
+            nome_arquivo_saida=f'grafico_remocao_{ordem}_log.png',
+            escala_y_log=True,
+            estruturas=['AVL', 'RubroNegra', ordem]
+        )
+
+        print("-" * 30)
