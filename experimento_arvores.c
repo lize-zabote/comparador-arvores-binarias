@@ -484,18 +484,19 @@ int btree_pesquisaBinaria(NoB *no, int chave)
     return inicio;
 }
 
-NoB *btree_localizaNo(ArvoreB *arvore, int chave)
-{
-    NoB *no = arvore->raiz;
-    while (no != NULL)
-    {
+NoB* btree_localizaNo(ArvoreB* arvore, int chave) {
+    NoB* no = arvore->raiz;
+    int count = 0;
+    while (no != NULL) {
+        count++;
         int i = btree_pesquisaBinaria(no, chave);
-        contB++; // count null check
-        if (no->filhos[i] == NULL)
+        if (no->filhos[i] == NULL) {
+            contB += count; // Count total node visits
             return no;
-        contB++; // count operation
+        }
         no = no->filhos[i];
     }
+    contB += count; // Count total node visits
     return NULL;
 }
 
@@ -504,7 +505,7 @@ void btree_adicionar_recursivo(ArvoreB* arvore, NoB* no, NoB* novo, int chave) {
     if (btree_transbordo(arvore, no)) {
         int promovido = no->chaves[arvore->ordem];
         NoB* novoNo = btree_divideNo(arvore, no);
-        contB++; // Contar só a divisão
+        contB++; // Count split
         if (no->pai == NULL) {
             NoB* pai = btree_criaNo(arvore);
             pai->filhos[0] = no;
